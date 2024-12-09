@@ -1,0 +1,227 @@
+<template>
+  <div id="app" class="container">
+    <div class="input-section">
+      <h1>古文字研究平台</h1>
+      <input v-model="character" placeholder="请输入汉字" />
+      <button @click="fetchCharacterDetails" :disabled="!character">查询</button>
+    </div>
+
+    <div class="result-section" v-if="characterDetails && !characterDetails.error">
+      <h2>查询结果</h2>
+      <div class="info-box">
+        <p><strong>上古韵部:</strong> {{ characterDetails.ancientRhyme }}</p>
+        <p><strong>上古声部:</strong> {{ characterDetails.ancientVoices }}</p>
+        <p><strong>说文部首:</strong> {{ characterDetails.speakingRadicals }}</p>
+        <p><strong>harmonicSideways:</strong> {{ characterDetails.harmonicSideways }}</p>
+      </div>
+
+      <!-- 时间段选择选项卡 -->
+      <div class="tabs">
+        <button
+          v-for="(tab, index) in tabs"
+          :key="index"
+          :class="{ active: activeTab === tab }"
+          @click="activeTab = tab"
+        >
+          {{ tab }}
+        </button>
+      </div>
+
+<!-- 时间段内容展示 -->
+<div v-if="activeTab === '汉魏时期' && filteredHanWeiImages.length" class="time-period">
+  <h3>汉魏时期</h3>
+  <div v-for="(image, index) in filteredHanWeiImages" :key="index" class="image-item">
+    <img :src="image.hanWei" class="info-image" />
+    <p><strong>著录:</strong> {{ image.bibliography1 }}</p>
+  </div>
+</div>
+
+<div v-if="activeTab === '唐宋时期' && filteredTangSongImages.length" class="time-period">
+  <h3>唐宋时期</h3>
+  <div v-for="(image, index) in filteredTangSongImages" :key="index" class="image-item">
+    <img :src="image.tangSong" class="info-image" />
+    <p><strong>著录:</strong> {{ image.bibliography2 }}</p>
+  </div>
+</div>
+
+<div v-if="activeTab === '元明清时期' && filteredYuanMingQingImages.length" class="time-period">
+  <h3>元明清时期</h3>
+  <div v-for="(image, index) in filteredYuanMingQingImages" :key="index" class="image-item">
+    <img :src="image.yuanMingQing" class="info-image" />
+    <p><strong>著录:</strong> {{ image.bibliography3 }}</p>
+  </div>
+</div>
+
+    </div>
+
+    <div class="empty-state" v-if="characterDetails && characterDetails.error">
+      <p>{{ characterDetails.error }}</p>
+    </div>
+    <div class="empty-state" v-if="!characterDetails">
+      <p>请输入汉字并点击查询...</p>
+    </div>
+  </div>
+</template>
+
+<script>
+import QueryWord from '@/api/getword';
+
+export default {
+  data() {
+    return {
+      character: '',
+      characterDetails: null,
+      activeTab: '汉魏时期', // 默认选中的选项卡
+      tabs: ['汉魏时期', '唐宋时期', '元明清时期'],
+    };
+  },
+  computed: {
+    filteredHanWeiImages() {
+      return this.characterDetails.images.filter(
+        (image) => image.hanWei !== '空' || image.bibliography1 !== '空'
+      );
+    },
+    filteredTangSongImages() {
+      return this.characterDetails.images.filter(
+        (image) => image.tangSong !== '空' || image.bibliography2 !== '空'
+      );
+    },
+    filteredYuanMingQingImages() {
+      return this.characterDetails.images.filter(
+        (image) => image.yuanMingQing !== '空' || image.bibliography3 !== '空'
+      );
+    },
+  },
+  methods: {
+    fetchCharacterDetails() {
+      QueryWord(this.character)
+        .then((data) => {
+          if (data.error) {
+            this.characterDetails = { error: data.error, images: [] };
+          } else {
+            this.characterDetails = {
+              ancientRhyme: data.ancientRhyme || '空',
+              ancientVoices: data.ancientVoices || '空',
+              speakingRadicals: data.speakingRadicals || '空',
+              harmonicSideways: data.harmonicSideways || '空',
+              images: data.images.map((image) => ({
+                hanWei: image.hanWei || '空',
+                tangSong: image.tangSong || '空',
+                yuanMingQing: image.yuanMingQing || '空',
+                bibliography1: image.bibliography1 || '空',
+                bibliography2: image.bibliography2 || '空',
+                bibliography3: image.bibliography3 || '空',
+              })),
+            };
+          }
+        })
+        .catch((error) => {
+          this.characterDetails = { error: '查询失败，请稍后再试。', images: [] };
+        });
+    },
+  },
+};
+</script>
+
+<style scoped>
+/* 布局样式 */
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.input-section {
+  width: 50%;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+button:hover:enabled {
+  background-color: #45a049;
+}
+
+/* 结果展示样式 */
+.result-section {
+  width: 75%;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-height: 150px;
+  text-align: left;
+}
+
+/* 选项卡样式 */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.tabs button {
+  padding: 10px 15px;
+  cursor: pointer;
+  border: none;
+  background-color: #ddd;
+  border-radius: 5px;
+}
+
+.tabs button.active {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.time-period {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.image-item {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.info-image {
+  width: 150px;
+  height: 150px;
+  border-radius: 5px;
+  margin-top: 10px;
+  object-fit: cover;
+}
+
+.empty-state {
+  font-size: 18px;
+  color: #666;
+  margin-top: 30px;
+  text-align: center;
+}
+</style>
